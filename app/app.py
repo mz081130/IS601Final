@@ -147,8 +147,7 @@ def activate(user_id):
     cursor.execute('SELECT * FROM accounts WHERE id = %s', (user_id))
     result = cursor.fetchall()
     user = result[0]
-    inputData = (user['username'], user['password'], user['firstname'],
-                 user['lastname'], user['school'], user['department'], user['year'], True, user_id)
+    inputData = (user['username'], user['password'], user['email'], True, user_id)
     sql_update_query = """UPDATE accounts t SET t.username = %s, t.password = %s, t.email = %s,
      WHERE t.id = %s """
     cursor.execute(sql_update_query, inputData)
