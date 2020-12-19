@@ -6,3 +6,4 @@ flask-mysql
 sendgrid
 flask_mail
 pymysql
+Flask-EmailVerifier

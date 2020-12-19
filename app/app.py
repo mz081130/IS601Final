@@ -7,13 +7,20 @@ import MySQLdb.cursors
 import MySQLdb
 from flask_mysqldb import MySQL
 from pymysql.cursors import DictCursor
+from flask import Flask, make_response
+from flask_email_verifier import EmailVerifier
+from json import dumps, loads
 import re
+import smtplib, ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import hashlib
+
 
 app = Flask(__name__)
 
 # Change this to your secret key (can be anything, it's for extra protection)
 app.secret_key = '123456789'
-
 app.config['MYSQL_HOST'] = 'db'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'root1'
@@ -100,6 +107,54 @@ def register():
 
         # Show registration form with message (if any)
     return render_template('register.html', msg=msg)
+
+    smtp_server = "smtp.gmail.com"
+    port = 587  # For starttls
+    sender_email = "istestingapp@gmail.com"
+    receiver_email = request.form.get('username')
+    mail_password = 'minhaomer1'
+    main_url = '/activate/{}'.format(user_id)
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Activating Account for School Hub"
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    content = """\
+    Subject: Confirm your Email 
+    Please click this link to activate: """ + main_url
+    part1 = MIMEText(content, "plain")
+    message.attach(part1)
+    context = ssl.create_default_context()
+    # Try to log in to server and send email
+    try:
+        server = smtplib.SMTP(smtp_server, port)
+        server.ehlo()  # Can be omitted
+        server.starttls(context=context)  # Secure the connection
+        server.ehlo()  # Can be omitted
+        server.login(sender_email, mail_password)
+        server.sendmail(sender_email, receiver_email, message.as_string())
+    except Exception as e:
+        # Print any error messages to stdout
+        print(e)
+    finally:
+        server.quit()
+    return redirect('/profile/{}'.format(user_id))
+
+
+@app.route('/activate/<int:user_id>', methods=['GET'])
+def activate(user_id):
+    cursor = mysql.get_db().cursor()
+    cursor.execute('SELECT * FROM accounts WHERE id = %s', (user_id))
+    result = cursor.fetchall()
+    user = result[0]
+    inputData = (user['username'], user['password'], user['firstname'],
+                 user['lastname'], user['school'], user['department'], user['year'], True, user_id)
+    sql_update_query = """UPDATE accounts t SET t.username = %s, t.password = %s, t.email = %s,
+     WHERE t.id = %s """
+    cursor.execute(sql_update_query, inputData)
+    mysql.get_db().commit()
+    return redirect('/profile/{}'.format(user_id))
+
 
 
 # http://localhost:5000/pythinlogin/home - this will be the home page, only accessible for loggedin users
